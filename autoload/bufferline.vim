@@ -7,6 +7,7 @@ let s:window_start = 0
 function! s:generate_names()
   let names = []
   let i = 1
+  let added_buffer = 1
   let last_buffer = bufnr('$')
   let current_buffer = bufnr('%')
   while i <= last_buffer
@@ -33,8 +34,11 @@ function! s:generate_names()
         let name = ''
         if g:bufferline_show_bufnr != 0 && g:bufferline_status_info.count >= g:bufferline_show_bufnr
           let name =  i . ':'
+        elseif g:bufferline_show_bufpos != 0
+          let name = added_buffer . ':'
         endif
         let name .= fname . modified
+        let name = trim(name)
 
         if current_buffer == i
           let name = g:bufferline_active_buffer_left . name . g:bufferline_active_buffer_right
@@ -44,6 +48,7 @@ function! s:generate_names()
         endif
 
         call add(names, [i, name])
+        let added_buffer += 1
       endif
     endif
     let i += 1
