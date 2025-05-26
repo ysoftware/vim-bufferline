@@ -16,7 +16,26 @@ function! s:generate_names()
       if getbufvar(i, '&mod')
         let modified = g:bufferline_modified
       endif
-      let fname = fnamemodify(bufname(i), g:bufferline_fname_mod)
+      let full_name = bufname(i)
+      let fname = fnamemodify(full_name, g:bufferline_fname_mod)
+
+      let symbol_prefix = ''
+      if exists('g:bufferline_custom_pattern_indicator') && type(g:bufferline_custom_pattern_indicator) == type([])
+        try
+          for pattern_pair in g:bufferline_custom_pattern_indicator
+            if len(pattern_pair) == 2
+              let pattern = pattern_pair[0]
+              let prefix = pattern_pair[1]
+  
+              if len(full_name) > 0 && full_name =~ glob2regpat(pattern)
+                let symbol_prefix = prefix
+                break
+              endif
+            endif
+          endfor
+        endtry
+      endif
+
       if g:bufferline_pathshorten != 0
         let fname = pathshorten(fname)
       endif
@@ -33,15 +52,15 @@ function! s:generate_names()
       if !skip
         let name = ''
         if g:bufferline_show_bufnr != 0 && g:bufferline_status_info.count >= g:bufferline_show_bufnr
-          let name =  i . ':'
-        elseif g:bufferline_show_bufpos != 0
+          let name = i . ':'
+        elseif g:bufferline_show_bufpos != 0 && current_buffer != i
           let name = added_buffer . ':'
         endif
-        let name .= fname . modified
+        let name .= symbol_prefix . fname . modified
         let name = trim(name)
 
         if current_buffer == i
-          let name = g:bufferline_active_buffer_left . name . g:bufferline_active_buffer_right
+          let name = g:bufferline_separator . g:bufferline_active_buffer_left . ':' . name . g:bufferline_active_buffer_right . g:bufferline_separator
           let g:bufferline_status_info.current = name
         else
           let name = g:bufferline_separator . name . g:bufferline_separator

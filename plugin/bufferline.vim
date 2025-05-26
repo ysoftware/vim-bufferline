@@ -11,7 +11,7 @@ endfunction
 
 call s:check_defined('g:bufferline_active_buffer_left', '[')
 call s:check_defined('g:bufferline_active_buffer_right', ']')
-call s:check_defined('g:bufferline_separator', ' ')
+call s:check_defined('g:bufferline_separator', '')
 call s:check_defined('g:bufferline_modified', '+')
 call s:check_defined('g:bufferline_echo', 1)
 call s:check_defined('g:bufferline_show_bufnr', 1)
@@ -24,6 +24,7 @@ call s:check_defined('g:bufferline_fixed_index', 1)
 call s:check_defined('g:bufferline_solo_highlight', 0)
 call s:check_defined('g:bufferline_excludes', ['\[vimfiler\]'])
 call s:check_defined('g:bufferline_pathshorten', 0)
+call s:check_defined('g:bufferline_custom_pattern_indicator', [])
 
 function! bufferline#generate_string()
   return "bufferline#generate_string() is obsolete! Please consult README."
