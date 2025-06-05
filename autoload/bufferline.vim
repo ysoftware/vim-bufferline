@@ -52,19 +52,21 @@ function! s:generate_names()
       if !skip
         let name = ''
         if g:bufferline_show_bufnr != 0 && g:bufferline_status_info.count >= g:bufferline_show_bufnr
-          let name = i . ':'
+          let name = i . '.'
         elseif g:bufferline_show_bufpos != 0 && current_buffer != i
-          let name = added_buffer . ':'
+          let name = added_buffer . '.'
         endif
         let name .= symbol_prefix . fname . modified
         let name = trim(name)
 
         if current_buffer == i
-          let name = g:bufferline_separator . g:bufferline_active_buffer_left . ':' . name . g:bufferline_active_buffer_right . g:bufferline_separator
+          let name = g:bufferline_active_buffer_left . '.' . name . g:bufferline_active_buffer_right . g:bufferline_separator
           let g:bufferline_status_info.current = name
         else
-          let name = g:bufferline_separator . name . g:bufferline_separator
+          let name = name . g:bufferline_separator
         endif
+
+        let name = bufferline#truncate_middle(name)
 
         call add(names, [i, name])
         let added_buffer += 1
@@ -80,6 +82,18 @@ function! s:generate_names()
   endif
 
   return names
+endfunction
+
+function! bufferline#truncate_middle(str) abort
+  let maxlen = 33
+  let keep_right = 10
+  if strlen(a:str) <= maxlen
+    return a:str
+  endif
+  let keep_left = maxlen - keep_right - 1
+  let left = strpart(a:str, 0, keep_left)
+  let right = strpart(a:str, strlen(a:str) - keep_right, keep_right)
+  return left . '*' . right
 endfunction
 
 function! bufferline#get_echo_string()
