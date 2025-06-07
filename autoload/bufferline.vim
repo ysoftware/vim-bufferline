@@ -2,8 +2,8 @@ let s:updatetime = &updatetime
 let s:window_start = 0
 
 function! bufferline#truncate_middle(str) abort
-    let maxlen = 33
-    let keep_right = 10
+    let maxlen = 25
+    let keep_right = 5
     if strlen(a:str) <= maxlen
         return a:str
     endif
