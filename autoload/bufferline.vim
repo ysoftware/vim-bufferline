@@ -179,6 +179,7 @@ function! s:echo()
         let visible_chars = 0
         let pos = 0
 
+        let sep = g:bufferline_separator
         let win_start = s:window_start
         let win_end   = s:window_start + width - 1
         let pos       = 0
@@ -186,9 +187,8 @@ function! s:echo()
         for item in items
             let fragment       = item[1]
             let hl             = item[2]
-            let fragment_with_sep = fragment . g:bufferline_separator
             let item_start     = pos
-            let item_end       = pos + strlen(fragment_with_sep) - 1
+            let item_end       = pos + strlen(fragment) - 1
 
             let ovl_start = max([item_start, win_start])
             let ovl_end   = min([item_end,   win_end])
@@ -196,14 +196,15 @@ function! s:echo()
             if ovl_start <= ovl_end
                 let local_off  = ovl_start - item_start
                 let local_len  = ovl_end   - ovl_start + 1
-                let piece      = strpart(fragment_with_sep, local_off, local_len)
+                let piece      = strpart(fragment, local_off, local_len)
 
                 execute 'echohl ' . hl
                 execute 'echon '   . string(piece)
                 execute 'echohl Normal'
+                execute 'echon ' . string(sep)
             endif
 
-            let pos += strlen(fragment_with_sep)
+            let pos += strlen(fragment) + strlen(sep)
             if item_end >= win_end
                 break
             endif
