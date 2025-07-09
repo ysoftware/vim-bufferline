@@ -2,15 +2,54 @@ let s:updatetime = &updatetime
 let s:window_start = 0
 
 function! bufferline#truncate_middle(str) abort
-    let maxlen = 25
-    let keep_right = 5
+    let maxlen = 40
+    let keep_right = 9
     if strlen(a:str) <= maxlen
         return a:str
     endif
     let keep_left = maxlen - keep_right - 1
     let left = strpart(a:str, 0, keep_left)
     let right = strpart(a:str, strlen(a:str) - keep_right, keep_right)
-    return left . '*' . right
+    return left . '…' . right
+endfunction
+
+function! s:fixed_position_modify(items)
+    let current = bufnr('%')
+    while len(a:items) > 0 && a:items[g:bufferline_fixed_index - 1][0] != current
+        let first = remove(a:items, 0)
+        call add(a:items, first)
+    endwhile
+endfunction
+
+function! s:apply_window_rotation(line, current_buffer_pos)
+    let width = &columns - 12
+    if g:bufferline_rotate == 2
+        let current_buffer_start = a:current_buffer_pos[0]
+        let current_buffer_end = a:current_buffer_pos[1]
+
+        if current_buffer_start >= 0
+            if current_buffer_start < s:window_start
+                let s:window_start = current_buffer_start
+            endif
+
+            if current_buffer_end >= (s:window_start + width)
+                let s:window_start = current_buffer_end - width + 1
+            endif
+
+            if s:window_start < 0
+                let s:window_start = 0
+            endif
+
+            let max_start = strlen(a:line) - width
+            if max_start > 0 && s:window_start > max_start
+                let s:window_start = max_start
+            endif
+        endif
+
+        return strpart(a:line, s:window_start, width)
+    else
+        return strpart(a:line, 0, width)
+    endif
 endfunction
 
 function! s:echo()
@@ -25,9 +64,6 @@ function! s:echo()
     let added_buffer   = 1
 
     " 12 is magical and is the threshold for when it doesn't wrap text anymore
-    let width = &columns - 12
-    let built = ''
-
     let items = []
     for i in range(1, last_buffer)
         if bufexists(i) && buflisted(i)
@@ -96,29 +132,83 @@ function! s:echo()
         endif
     endfor
 
+    if (g:bufferline_rotate == 1) && len(items) > g:bufferline_fixed_index
+        call s:fixed_position_modify(items)
+    endif
+
     let built = ''
     let width = &columns - 12
+    let current_buffer_pos = [-1, -1]
+
     for item in items
         let fragment = item[1]
         let hl = item[2]
         let sep = g:bufferline_separator
         let new_len = strlen(built) + strlen(fragment) + strlen(sep)
-        if new_len > width
+        if new_len > width && g:bufferline_rotate != 2
             break
         endif
 
-        let idx = match(built, '\V' . g:bufferline_status_info.current)
-        let built .= fragment . sep
-        if idx >= 0
-            let g:bufferline_status_info.before = strpart(built, 0, idx)
-            let g:bufferline_status_info.after  = strpart(built, idx + len(g:bufferline_status_info.current))
+        if item[0] == current_buffer
+            let current_buffer_pos[0] = strlen(built)
+            let current_buffer_pos[1] = strlen(built) + strlen(fragment) + strlen(sep) - 1
         endif
-        execute 'echohl ' . hl
-        execute 'echon '  . string(fragment)
-        execute 'echohl Normal'
-        execute 'echon " "'
-        echohl None
+
+        let built .= fragment . sep
+
+        if g:bufferline_rotate != 2
+            let idx = match(built, '\V' . g:bufferline_status_info.current)
+            if idx >= 0
+                let g:bufferline_status_info.before = strpart(built, 0, idx)
+                let g:bufferline_status_info.after  = strpart(built, idx + len(g:bufferline_status_info.current))
+            endif
+
+            execute 'echohl ' . hl
+            execute 'echon ' . string(fragment)
+            execute 'echohl Normal'
+            execute 'echon ' . string(sep)
+            echohl None
+        endif
     endfor
+
+    if g:bufferline_rotate == 2
+        let display_line = s:apply_window_rotation(built, current_buffer_pos)
+        let max_width = &columns - 12
+
+        let display_pos = 0
+        let visible_chars = 0
+        let pos = 0
+
+        let win_start = s:window_start
+        let win_end   = s:window_start + width - 1
+        let pos       = 0
+
+        for item in items
+            let fragment       = item[1]
+            let hl             = item[2]
+            let fragment_with_sep = fragment . g:bufferline_separator
+            let item_start     = pos
+            let item_end       = pos + strlen(fragment_with_sep) - 1
+
+            let ovl_start = max([item_start, win_start])
+            let ovl_end   = min([item_end,   win_end])
+
+            if ovl_start <= ovl_end
+                let local_off  = ovl_start - item_start
+                let local_len  = ovl_end   - ovl_start + 1
+                let piece      = strpart(fragment_with_sep, local_off, local_len)
+
+                execute 'echohl ' . hl
+                execute 'echon '   . string(piece)
+                execute 'echohl Normal'
+            endif
+
+            let pos += strlen(fragment_with_sep)
+            if item_end >= win_end
+                break
+            endif
+        endfor
+    endif
 
     echohl None
 
@@ -144,7 +234,7 @@ function! bufferline#init_echo()
         " events which output a message which should be immediately overwritten
         autocmd BufWinEnter,WinEnter,InsertLeave,VimResized * call s:refresh(1)
         autocmd BufWrite * call s:refresh(1000)
+        " Initial setup - use refresh to establish the autocmd
+        call s:refresh(1)
     augroup END
-
-    autocmd CursorHold * call s:echo()
 endfunction
